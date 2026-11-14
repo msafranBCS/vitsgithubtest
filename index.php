@@ -54,7 +54,7 @@
                 <a href="#" class="block p-3 rounded-xl gold-bg text-black font-semibold">
                     ◈ Dashboard
                 </a>
-                <a href="#expenses" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">
+                <a href="expenses.php" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">
                     ◷ Daily Expenses
                 </a>
                 <a href="#tasks" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">
