@@ -60,7 +60,7 @@
                 <a href="#tasks" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">
                     ✓ To-Do Tasks
                 </a>
-                <a href="#transactions" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">
+                <a href="transection.php" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">
                     ▤ Transactions
                 </a>
             </nav>
