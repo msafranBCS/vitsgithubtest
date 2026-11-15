@@ -139,67 +139,10 @@
 
 <div class="flex min-h-screen">
 
-    <!-- Sidebar -->
-    <aside id="sidebar" class="flex flex-col p-6">
-
-<<<<<<< HEAD
-        <h1 class="text-2xl font-extrabold gold tracking-wide">
-            ELITE<span class="text-slate-800">.</span>
-        </h1>
-=======
-            <nav class="mt-12 space-y-3">
-                <a href="#" class="block p-3 rounded-xl gold-bg text-black font-semibold">
-                    ◈ Dashboard
-                </a>
-                <a href="expenses.php" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">
-                    ◷ Daily Expenses
-                </a>
-                <a href="#tasks" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">
-                    ✓ To-Do Tasks
-                </a>
-                <a href="transection.php" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">
-                    ▤ Transactions
-                </a>
-            </nav>
->>>>>>> safran
-
-        <p class="text-slate-400 text-xs mt-1">
-            PERSONAL MANAGEMENT
-        </p>
-
-        <nav class="mt-12 space-y-3">
-
-            <a href="#" class="sidebar-link sidebar-active">
-                ◈ Dashboard
-            </a>
-
-            <a href="#expenses" class="sidebar-link">
-                ◷ Daily Expenses
-            </a>
-
-            <a href="#tasks" class="sidebar-link">
-                ✓ To-Do Tasks
-            </a>
-
-            <a href="#transactions" class="sidebar-link">
-                ▤ Transactions
-            </a>
-
-        </nav>
-
-        <div class="mt-auto glass p-4 rounded-2xl">
-            <p class="text-xs text-slate-400">YOUR DAILY GOAL</p>
-
-            <h2 class="text-xl font-bold gold mt-2">
-                Stay Focused.
-            </h2>
-
-            <p class="text-xs text-slate-500 mt-2">
-                Manage your money. Manage your time.
-            </p>
-        </div>
-
-    </aside>
+        <!-- Sidebar -->
+       <?php
+       include 'include/sidebar.php';
+        ?>
 
     <!-- Main Content -->
     <main class="flex-1 min-w-0 p-5 md:p-10">
