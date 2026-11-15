@@ -6,7 +6,6 @@ use PHPMailer\PHPMailer\Exception;
 
 require 'send-mail/vendor/autoload.php';
 
-print_r($_SESSION);
 
 require_once 'config/db.php';
 
@@ -62,7 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['login'])) {
             $mail->Username = 'msafran066@gmail.com';
 
             // Your Google App Password
-            $mail->Password = 'enter your app password here';
+            $mail->Password = '';
 
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
