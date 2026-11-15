@@ -4,7 +4,14 @@
 // DATABASE CONNECTION
 // =============================================
 
+<<<<<<< HEAD
 include 'config/db.php';
+=======
+use PSpell\Config;
+
+include ('Config/db.php');
+
+>>>>>>> adheel
 // =============================================
 // CREATE EXPENSE TABLE
 // =============================================
