@@ -309,7 +309,7 @@ tbody tr:hover {
             ◈ Dashboard
         </a>
 
-        <a href="index.php#expenses" class="sidebar-link">
+        <a href="expenses.php" class="sidebar-link">
             ◷ Daily Expenses
         </a>
 
