@@ -26,6 +26,11 @@
             ▤ Transactions
         </a>
 
+        <a href="logout.php"  class="sidebar-link">
+    <i class="fas fa-sign-out-alt"></i>
+    <span>Logout</span>
+</a>
+
     </nav>
 
     <div class="mt-auto glass p-4 rounded-2xl">

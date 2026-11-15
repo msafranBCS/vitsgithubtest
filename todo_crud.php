@@ -3,6 +3,7 @@
 session_start();
 
 require_once 'config/db.php';
+require_once 'auth.php';
 
 function clean($value) {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
