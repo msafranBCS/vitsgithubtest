@@ -2,42 +2,13 @@
 <?php
 session_start();
 
-$host = "localhost";
-$user = "root";
-$password = "root123";
-$database = "elite_daily";
-
-try {
-    $pdo = new PDO(
-        "mysql:host=$host;charset=utf8mb4",
-        $user,
-        $password,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
-
-    $pdo->exec("CREATE DATABASE IF NOT EXISTS `$database`");
-    $pdo->exec("USE `$database`");
-
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            title VARCHAR(255) NOT NULL,
-            due_date DATE NOT NULL,
-            priority ENUM('Low','Medium','High') DEFAULT 'Medium',
-            status ENUM('Pending','Completed') DEFAULT 'Pending',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ");
-
-} catch (PDOException $e) {
-    die("Database Error: " . htmlspecialchars($e->getMessage()));
-}
+require_once 'config/db.php';
 
 function clean($value) {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
 }
 
-// ADD TASK
+ //ADD TASK
 if (isset($_POST['add_task'])) {
 
     $title = trim($_POST['title']);
