@@ -1,4 +1,3 @@
-
 <?php
 // =============================================
 // DATABASE CONNECTION
@@ -215,7 +214,6 @@ if (isset($_GET['action'])) {
         }
 
         throw new Exception('Invalid action.');
-
     } catch (Throwable $e) {
 
         http_response_code(400);
@@ -248,6 +246,54 @@ if (isset($_GET['action'])) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0b0e13;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+        }
+
+        .gold {
+            color: #d6b36a;
+        }
+
+        .gold-bg {
+            background: linear-gradient(135deg, #e4c47d, #a98238);
+        }
+
+        input,
+        select,
+        textarea {
+            color-scheme: dark;
+        }
+
+        .expense-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            transition: background 0.2s ease;
+        }
+
+        .expense-item:hover {
+            background: rgba(255, 255, 255, 0.025);
+        }
+
+        .gold-btn {
+            background: linear-gradient(135deg, #e4c47d, #a98238);
+            color: #090b0f;
+            transition: all .2s ease;
+        }
+
+        .gold-btn:hover {
+            opacity: .9;
+            transform: translateY(-1px);
+        }
+
+        #toast {
+            transition: all .3s ease;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -268,107 +314,59 @@ if (isset($_GET['action'])) {
             background: linear-gradient(135deg, #e4c47d, #a98238);
         }
 
-        input, select, textarea {
-            color-scheme: dark;
+        .gold-border {
+            border-color: rgba(214, 179, 106, 0.35);
         }
 
-        .expense-item {
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            transition: background 0.2s ease;
+        .input-dark {
+            background: #141923;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            outline: none;
         }
 
-        .expense-item:hover {
-            background: rgba(255,255,255,0.025);
+        .input-dark:focus {
+            border-color: #d6b36a;
         }
 
-        .gold-btn {
+        .input-dark option {
+            background: #141923;
+        }
+
+        .gold-button {
             background: linear-gradient(135deg, #e4c47d, #a98238);
-            color: #090b0f;
-            transition: all .2s ease;
+            color: #111;
+            font-weight: 700;
+            transition: 0.3s;
         }
 
-        .gold-btn:hover {
-            opacity: .9;
+        .gold-button:hover {
+            opacity: 0.85;
             transform: translateY(-1px);
         }
 
-        #toast {
-            transition: all .3s ease;
+        .sidebar-link {
+            display: block;
+            padding: 13px;
+            border-radius: 12px;
+            color: #9ca3af;
+            transition: 0.2s;
         }
-        body {
-    font-family: 'Inter', sans-serif;
-    background: #0b0e13;
-}
 
-.glass {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    backdrop-filter: blur(15px);
-}
+        .sidebar-link:hover,
+        .sidebar-link.select {
+            background: linear-gradient(135deg, #e4c47d, #a98238);
+            color: #111;
+        }
 
-.gold {
-    color: #d6b36a;
-}
-
-.gold-bg {
-    background: linear-gradient(135deg,#e4c47d,#a98238);
-}
-
-.gold-border {
-    border-color: rgba(214,179,106,0.35);
-}
-
-.input-dark {
-    background: #141923;
-    border: 1px solid rgba(255,255,255,0.1);
-    color: white;
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    outline: none;
-}
-
-.input-dark:focus {
-    border-color: #d6b36a;
-}
-.input-dark option {
-    background: #141923;
-}
-
-.gold-button {
-    background: linear-gradient(135deg,#e4c47d,#a98238);
-    color: #111;
-    font-weight: 700;
-    transition: 0.3s;
-}
-.gold-button:hover {
-    opacity: 0.85;
-    transform: translateY(-1px);
-}
-
-.sidebar-link {
-    display: block;
-    padding: 13px;
-    border-radius: 12px;
-    color: #9ca3af;
-    transition: 0.2s;
-}
-
-.sidebar-link:hover,
-.sidebar-link.select{
-    background: linear-gradient(135deg,#e4c47d,#a98238);
-    color: #111;
-}
-
-table {
-    border-collapse: collapse;
-    width: 100%;
-    min-width: 750px;
-}
-
-
-
-
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 750px;
+        }
     </style>
 
 </head>
@@ -376,509 +374,496 @@ table {
 
 <body class="text-white min-h-screen">
 
-<div class="flex min-h-screen">
+    <div class="flex min-h-screen">
 
-    <!-- SIDEBAR -->
+        <!-- SIDEBAR -->
 
-    <?php include 'include/sidebar.php'; ?>
-
-
-    <!-- MAIN CONTENT -->
-
-    <main class="flex-1 p-5 md:p-10">
+        <?php include 'include/sidebar.php'; ?>
 
 
-        <!-- HEADER -->
+        <!-- MAIN CONTENT -->
 
-        <header class="flex justify-between items-center mb-10">
-
-            <div>
-
-                <p class="text-gray-500 text-sm uppercase">
-                    <?= strtoupper(date('l, F d')) ?>
-                </p>
-
-                <h2 class="text-2xl md:text-3xl font-bold mt-2">
-                    Good <?= date('H') < 12 ? 'Morning' : (date('H') < 17 ? 'Afternoon' : 'Evening') ?> 👋
-                </h2>
-
-                <p class="text-gray-400 text-sm mt-1">
-                    Welcome back. Here's your daily overview.
-                </p>
-
-            </div>
-
-            <div class="hidden sm:block text-right">
-
-                <p class="gold text-sm font-semibold">
-                    PREMIUM EDITION
-                </p>
-
-                <p class="text-gray-500 text-xs mt-1">
-                    PERSONAL DASHBOARD
-                </p>
-
-            </div>
-
-        </header>
+        <main class="flex-1 p-5 md:p-10">
 
 
-        <!-- SUMMARY CARDS -->
+            <!-- HEADER -->
 
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <header class="flex justify-between items-center mb-10">
 
+                <div>
 
-            <!-- TODAY -->
+                    <p class="text-gray-500 text-sm uppercase">
+                        <?= strtoupper(date('l, F d')) ?>
+                    </p>
 
-            <div class="glass p-6 rounded-2xl">
+                    <h2 class="text-2xl md:text-3xl font-bold mt-2">
+                        Good <?= date('H') < 12 ? 'Morning' : (date('H') < 17 ? 'Afternoon' : 'Evening') ?> 👋
+                    </h2>
 
-                <p class="text-gray-400 text-sm">
-                    Today's Expenses
-                </p>
+                    <p class="text-gray-400 text-sm mt-1">
+                        Welcome back. Here's your daily overview.
+                    </p>
 
-                <h2 id="todayExpenses"
-                    class="text-2xl md:text-3xl font-bold mt-3">
-                    Rs. 0.00
-                </h2>
+                </div>
 
-                <p class="text-red-400 text-xs mt-3">
-                    ↑ Today's spending
-                </p>
+                <div class="hidden sm:block text-right">
 
-            </div>
+                    <p class="gold text-sm font-semibold">
+                        PREMIUM EDITION
+                    </p>
 
+                    <p class="text-gray-500 text-xs mt-1">
+                        PERSONAL DASHBOARD
+                    </p>
 
-            <!-- MONTHLY -->
+                </div>
 
-            <div class="glass p-6 rounded-2xl">
-
-                <p class="text-gray-400 text-sm">
-                    Monthly Expenses
-                </p>
-
-                <h2 id="monthlyExpenses"
-                    class="text-2xl md:text-3xl font-bold mt-3">
-                    Rs. 0.00
-                </h2>
-
-                <p class="text-gray-500 text-xs mt-3">
-                    <?= date('F Y') ?>
-                </p>
-
-            </div>
+            </header>
 
 
-            <!-- ALL EXPENSES -->
+            <!-- SUMMARY CARDS -->
 
-            <div class="glass p-6 rounded-2xl">
-
-                <p class="text-gray-400 text-sm">
-                    Total Expenses
-                </p>
-
-                <h2 id="totalExpenses"
-                    class="text-2xl md:text-3xl font-bold mt-3 gold">
-                    Rs. 0.00
-                </h2>
-
-                <p class="text-green-400 text-xs mt-3">
-                    All recorded expenses
-                </p>
-
-            </div>
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
 
 
-            <!-- RECORD COUNT -->
+                <!-- TODAY -->
 
-            <div class="glass p-6 rounded-2xl">
+                <div class="glass p-6 rounded-2xl">
 
-                <p class="text-gray-400 text-sm">
-                    Expense Records
-                </p>
+                    <p class="text-gray-400 text-sm">
+                        Today's Expenses
+                    </p>
 
-                <h2 id="expenseCount"
-                    class="text-2xl md:text-3xl font-bold mt-3">
-                    0
-                </h2>
+                    <h2 id="todayExpenses"
+                        class="text-2xl md:text-3xl font-bold mt-3">
+                        Rs. 0.00
+                    </h2>
 
-                <p class="text-gray-500 text-xs mt-3">
-                    Total transactions
-                </p>
-
-            </div>
-
-
-        </section>
-
-
-        <!-- FORMS -->
-
-        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-
-
-            <!-- EXPENSE FORM -->
-
-            <div id="expenses" class="glass p-6 rounded-2xl">
-
-                <div class="flex justify-between items-center mb-6">
-
-                    <h3 id="expenseFormTitle" class="text-lg font-bold">
-                        Add Daily Expense
-                    </h3>
-
-                    <span class="gold text-sm">
-                        ✦ EXPENSE
-                    </span>
+                    <p class="text-red-400 text-xs mt-3">
+                        ↑ Today's spending
+                    </p>
 
                 </div>
 
 
-                <form id="expenseForm" class="space-y-4">
+                <!-- MONTHLY -->
 
-                    <input type="hidden" id="expenseId">
+                <div class="glass p-6 rounded-2xl">
 
+                    <p class="text-gray-400 text-sm">
+                        Monthly Expenses
+                    </p>
 
-                    <!-- TITLE -->
+                    <h2 id="monthlyExpenses"
+                        class="text-2xl md:text-3xl font-bold mt-3">
+                        Rs. 0.00
+                    </h2>
 
-                    <div>
-
-                        <label class="text-xs text-gray-400">
-                            Expense Title
-                        </label>
-
-                        <input
-                            id="expenseTitle"
-                            type="text"
-                            maxlength="150"
-                            required
-                            placeholder="e.g. Lunch, Transport"
-                            class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-yellow-600"
-                        >
-
-                    </div>
-
-
-                    <!-- AMOUNT AND CATEGORY -->
-
-                    <div class="grid grid-cols-2 gap-4">
-
-                        <div>
-
-                            <label class="text-xs text-gray-400">
-                                Amount (LKR)
-                            </label>
-
-                            <input
-                                id="expenseAmount"
-                                type="number"
-                                min="0.01"
-                                max="9999999999.99"
-                                step="0.01"
-                                required
-                                placeholder="0.00"
-                                class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-yellow-600"
-                            >
-
-                        </div>
-
-
-                        <div>
-
-                            <label class="text-xs text-gray-400">
-                                Category
-                            </label>
-
-                            <select
-                                id="expenseCategory"
-                                required
-                                class="w-full mt-2 p-3 rounded-xl bg-[#171b22] border border-white/10 outline-none"
-                            >
-
-                                <option value="">Select</option>
-                                <option value="Food">Food</option>
-                                <option value="Transport">Transport</option>
-                                <option value="Shopping">Shopping</option>
-                                <option value="Bills">Bills</option>
-                                <option value="Education">Education</option>
-                                <option value="Health">Health</option>
-                                <option value="Entertainment">Entertainment</option>
-                                <option value="Other">Other</option>
-
-                            </select>
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- DATE -->
-
-                    <div>
-
-                        <label class="text-xs text-gray-400">
-                            Expense Date
-                        </label>
-
-                        <input
-                            id="expenseDate"
-                            type="date"
-                            required
-                            class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none"
-                        >
-
-                    </div>
-
-
-                    <!-- NOTES -->
-
-                    <div>
-
-                        <label class="text-xs text-gray-400">
-                            Notes
-                        </label>
-
-                        <textarea
-                            id="expenseNotes"
-                            rows="2"
-                            placeholder="Additional information..."
-                            class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-yellow-600"
-                        ></textarea>
-
-                    </div>
-
-
-                    <!-- BUTTONS -->
-
-                    <div class="flex gap-3">
-
-                        <button
-                            type="submit"
-                            id="expenseSubmitBtn"
-                            class="gold-bg text-black w-full p-3 rounded-xl font-bold hover:opacity-90"
-                        >
-                            + Add Expense
-                        </button>
-
-                        <button
-                            type="button"
-                            id="cancelEditBtn"
-                            onclick="resetExpenseForm()"
-                            class="hidden px-5 py-3 rounded-xl border border-white/10 text-gray-300 hover:bg-white/5"
-                        >
-                            Cancel
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-
-            <!-- TASK FORM -->
-
-            <div id="tasks" class="glass p-6 rounded-2xl">
-
-                <div class="flex justify-between mb-6">
-
-                    <h3 class="text-lg font-bold">
-                        Create New Task
-                    </h3>
-
-                    <span class="gold">
-                        ✦ PRODUCTIVITY
-                    </span>
+                    <p class="text-gray-500 text-xs mt-3">
+                        <?= date('F Y') ?>
+                    </p>
 
                 </div>
 
 
-                <form id="taskForm" class="space-y-4">
+                <!-- ALL EXPENSES -->
 
-                    <div>
+                <div class="glass p-6 rounded-2xl">
 
-                        <label class="text-xs text-gray-400">
-                            Task Name
-                        </label>
+                    <p class="text-gray-400 text-sm">
+                        Total Expenses
+                    </p>
 
-                        <input
-                            id="taskTitle"
-                            required
-                            placeholder="What needs to be done?"
-                            class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none"
-                        >
+                    <h2 id="totalExpenses"
+                        class="text-2xl md:text-3xl font-bold mt-3 gold">
+                        Rs. 0.00
+                    </h2>
+
+                    <p class="text-green-400 text-xs mt-3">
+                        All recorded expenses
+                    </p>
+
+                </div>
+
+
+                <!-- RECORD COUNT -->
+
+                <div class="glass p-6 rounded-2xl">
+
+                    <p class="text-gray-400 text-sm">
+                        Expense Records
+                    </p>
+
+                    <h2 id="expenseCount"
+                        class="text-2xl md:text-3xl font-bold mt-3">
+                        0
+                    </h2>
+
+                    <p class="text-gray-500 text-xs mt-3">
+                        Total transactions
+                    </p>
+
+                </div>
+
+
+            </section>
+
+
+            <!-- FORMS -->
+
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+
+                <!-- EXPENSE FORM -->
+
+                <div id="expenses" class="glass p-6 rounded-2xl">
+
+                    <div class="flex justify-between items-center mb-6">
+
+                        <h3 id="expenseFormTitle" class="text-lg font-bold">
+                            Add Daily Expense
+                        </h3>
+
+                        <span class="gold text-sm">
+                            ✦ EXPENSE
+                        </span>
 
                     </div>
 
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <form id="expenseForm" class="space-y-4">
+
+                        <input type="hidden" id="expenseId">
+
+
+                        <!-- TITLE -->
 
                         <div>
 
                             <label class="text-xs text-gray-400">
-                                Due Date
+                                Expense Title
                             </label>
 
                             <input
-                                id="taskDate"
+                                id="expenseTitle"
+                                type="text"
+                                maxlength="150"
+                                required
+                                placeholder="e.g. Lunch, Transport"
+                                class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-yellow-600">
+
+                        </div>
+
+
+                        <!-- AMOUNT AND CATEGORY -->
+
+                        <div class="grid grid-cols-2 gap-4">
+
+                            <div>
+
+                                <label class="text-xs text-gray-400">
+                                    Amount (LKR)
+                                </label>
+
+                                <input
+                                    id="expenseAmount"
+                                    type="number"
+                                    min="0.01"
+                                    max="9999999999.99"
+                                    step="0.01"
+                                    required
+                                    placeholder="0.00"
+                                    class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-yellow-600">
+
+                            </div>
+
+
+                            <div>
+
+                                <label class="text-xs text-gray-400">
+                                    Category
+                                </label>
+
+                                <select
+                                    id="expenseCategory"
+                                    required
+                                    class="w-full mt-2 p-3 rounded-xl bg-[#171b22] border border-white/10 outline-none">
+
+                                    <option value="">Select</option>
+                                    <option value="Food">Food</option>
+                                    <option value="Transport">Transport</option>
+                                    <option value="Shopping">Shopping</option>
+                                    <option value="Bills">Bills</option>
+                                    <option value="Education">Education</option>
+                                    <option value="Health">Health</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                    <option value="Other">Other</option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- DATE -->
+
+                        <div>
+
+                            <label class="text-xs text-gray-400">
+                                Expense Date
+                            </label>
+
+                            <input
+                                id="expenseDate"
                                 type="date"
                                 required
-                                class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10"
-                            >
+                                class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none">
 
                         </div>
 
+
+                        <!-- NOTES -->
 
                         <div>
 
                             <label class="text-xs text-gray-400">
-                                Priority
+                                Notes
                             </label>
 
-                            <select
-                                id="taskPriority"
-                                class="w-full mt-2 p-3 rounded-xl bg-[#171b22] border border-white/10"
-                            >
-
-                                <option>Low</option>
-                                <option>Medium</option>
-                                <option>High</option>
-
-                            </select>
+                            <textarea
+                                id="expenseNotes"
+                                rows="2"
+                                placeholder="Additional information..."
+                                class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-yellow-600"></textarea>
 
                         </div>
+
+
+                        <!-- BUTTONS -->
+
+                        <div class="flex gap-3">
+
+                            <button
+                                type="submit"
+                                id="expenseSubmitBtn"
+                                class="gold-bg text-black w-full p-3 rounded-xl font-bold hover:opacity-90">
+                                + Add Expense
+                            </button>
+
+                            <button
+                                type="button"
+                                id="cancelEditBtn"
+                                onclick="resetExpenseForm()"
+                                class="hidden px-5 py-3 rounded-xl border border-white/10 text-gray-300 hover:bg-white/5">
+                                Cancel
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+
+                <!-- TASK FORM -->
+
+                <div id="tasks" class="glass p-6 rounded-2xl">
+
+                    <div class="flex justify-between mb-6">
+
+                        <h3 class="text-lg font-bold">
+                            Create New Task
+                        </h3>
+
+                        <span class="gold">
+                            ✦ PRODUCTIVITY
+                        </span>
 
                     </div>
 
 
-                    <button class="gold-bg text-black w-full p-3 rounded-xl font-bold hover:opacity-90">
-                        + Create Task
-                    </button>
+                    <form id="taskForm" class="space-y-4">
 
-                </form>
+                        <div>
 
-            </div>
+                            <label class="text-xs text-gray-400">
+                                Task Name
+                            </label>
 
-        </section>
+                            <input
+                                id="taskTitle"
+                                required
+                                placeholder="What needs to be done?"
+                                class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none">
+
+                        </div>
 
 
-        <!-- RECENT DATA -->
+                        <div class="grid grid-cols-2 gap-4">
 
-        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+
+                                <label class="text-xs text-gray-400">
+                                    Due Date
+                                </label>
+
+                                <input
+                                    id="taskDate"
+                                    type="date"
+                                    required
+                                    class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10">
+
+                            </div>
 
 
-            <!-- RECENT EXPENSES -->
+                            <div>
 
-            <div id="transactions" class="glass p-6 rounded-2xl">
+                                <label class="text-xs text-gray-400">
+                                    Priority
+                                </label>
 
-                <div class="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+                                <select
+                                    id="taskPriority"
+                                    class="w-full mt-2 p-3 rounded-xl bg-[#171b22] border border-white/10">
 
-                    <h3 class="font-bold text-lg">
-                        Recent Expenses
+                                    <option>Low</option>
+                                    <option>Medium</option>
+                                    <option>High</option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <button class="gold-bg text-black w-full p-3 rounded-xl font-bold hover:opacity-90">
+                            + Create Task
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </section>
+
+
+            <!-- RECENT DATA -->
+
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+
+                <!-- RECENT EXPENSES -->
+
+                <div id="transactions" class="glass p-6 rounded-2xl">
+
+                    <div class="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+
+                        <h3 class="font-bold text-lg">
+                            Recent Expenses
+                        </h3>
+
+                        <input
+                            id="expenseSearch"
+                            type="text"
+                            placeholder="Search expenses..."
+                            class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-yellow-600">
+
+                    </div>
+
+
+                    <div id="expenseList" class="space-y-4">
+
+                        <p class="text-gray-500 text-sm">
+                            Loading expenses...
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- TASKS -->
+
+                <div class="glass p-6 rounded-2xl">
+
+                    <h3 class="font-bold text-lg mb-6">
+                        Today's Tasks
                     </h3>
 
-                    <input
-                        id="expenseSearch"
-                        type="text"
-                        placeholder="Search expenses..."
-                        class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-yellow-600"
-                    >
+                    <div id="taskList" class="space-y-4">
+
+                        <p class="text-gray-500 text-sm">
+                            Your tasks will appear here.
+                        </p>
+
+                    </div>
 
                 </div>
 
 
-                <div id="expenseList" class="space-y-4">
-
-                    <p class="text-gray-500 text-sm">
-                        Loading expenses...
-                    </p>
-
-                </div>
-
-            </div>
+            </section>
 
 
-            <!-- TASKS -->
+            <!-- FOOTER -->
 
-            <div class="glass p-6 rounded-2xl">
+            <footer class="text-center text-gray-600 text-xs mt-12 pb-5">
 
-                <h3 class="font-bold text-lg mb-6">
-                    Today's Tasks
-                </h3>
+                © <?= date('Y') ?> ELITE DAILY. Crafted for better living.
 
-                <div id="taskList" class="space-y-4">
-
-                    <p class="text-gray-500 text-sm">
-                        Your tasks will appear here.
-                    </p>
-
-                </div>
-
-            </div>
+            </footer>
 
 
-        </section>
+        </main>
+
+    </div>
 
 
-        <!-- FOOTER -->
+    <!-- TOAST NOTIFICATION -->
 
-        <footer class="text-center text-gray-600 text-xs mt-12 pb-5">
-
-            © <?= date('Y') ?> ELITE DAILY. Crafted for better living.
-
-        </footer>
-
-
-    </main>
-
-</div>
+    <div
+        id="toast"
+        role="status"
+        aria-live="polite"
+        class="hidden fixed top-5 right-5 px-6 py-4 rounded-xl text-black font-semibold shadow-lg z-50"></div>
 
 
-<!-- TOAST NOTIFICATION -->
+    <script>
+        // =============================================
+        // EXPENSE CRUD JAVASCRIPT
+        // =============================================
 
-<div
-    id="toast"
-    role="status"
-    aria-live="polite"
-    class="hidden fixed top-5 right-5 px-6 py-4 rounded-xl text-black font-semibold shadow-lg z-50"
-></div>
+        const API = window.location.pathname;
 
+        let expenses = [];
 
-<script>
-
-// =============================================
-// EXPENSE CRUD JAVASCRIPT
-// =============================================
-
-const API = window.location.pathname;
-
-let expenses = [];
-
-let toastTimer;
+        let toastTimer;
 
 
-// FORMAT CURRENCY
+        // FORMAT CURRENCY
 
-function formatMoney(value) {
+        function formatMoney(value) {
 
-    return 'Rs. ' + Number(value).toLocaleString('en-LK', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
+            return 'Rs. ' + Number(value).toLocaleString('en-LK', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
 
-}
+        }
 
 
-// TOAST NOTIFICATION
+        // TOAST NOTIFICATION
 
-function showToast(message, success = true) {
+        function showToast(message, success = true) {
 
-    const toast = document.getElementById('toast');
+            const toast = document.getElementById('toast');
 
-    clearTimeout(toastTimer);
+            clearTimeout(toastTimer);
 
-    toast.textContent = message;
+            toast.textContent = message;
 
-    toast.className = `
+            toast.className = `
         fixed top-5 right-5 px-6 py-4 rounded-xl
         font-semibold shadow-lg z-50
         ${success
@@ -886,105 +871,104 @@ function showToast(message, success = true) {
             : 'bg-red-500 text-white'}
     `;
 
-    toastTimer = setTimeout(() => {
-        toast.classList.add('hidden');
-    }, 3000);
+            toastTimer = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
 
-}
-
-
-// API REQUEST
-
-async function request(action, data = {}) {
-
-    const response = await fetch(
-        API + '?action=' + encodeURIComponent(action),
-        {
-            method: action === 'read' ? 'GET' : 'POST',
-
-            headers: {
-                'Content-Type': 'application/json'
-            },
-
-            body: action === 'read'
-                ? null
-                : JSON.stringify(data)
         }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Request failed.');
-    }
-
-    return result;
-
-}
 
 
-// ESCAPE HTML
+        // API REQUEST
 
-function escapeHTML(value) {
+        async function request(action, data = {}) {
 
-    return String(value ?? '').replace(/[&<>"']/g, char => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    })[char]);
+            const response = await fetch(
+                API + '?action=' + encodeURIComponent(action), {
+                    method: action === 'read' ? 'GET' : 'POST',
 
-}
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
 
+                    body: action === 'read' ?
+                        null :
+                        JSON.stringify(data)
+                }
+            );
 
-// READ EXPENSES
+            const result = await response.json();
 
-async function loadExpenses() {
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Request failed.');
+            }
 
-    try {
+            return result;
 
-        const result = await request('read');
-
-        expenses = result.expenses;
-
-        // UPDATE SUMMARY CARDS
-
-        document.getElementById('todayExpenses').textContent =
-            formatMoney(result.today);
-
-        document.getElementById('monthlyExpenses').textContent =
-            formatMoney(result.monthly);
-
-        document.getElementById('totalExpenses').textContent =
-            formatMoney(result.total);
-
-        document.getElementById('expenseCount').textContent =
-            result.count;
+        }
 
 
-        // DISPLAY TABLE
+        // ESCAPE HTML
 
-        displayExpenses(expenses);
+        function escapeHTML(value) {
 
-    } catch(error) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            })[char]);
 
-        showToast(error.message, false);
-
-    }
-
-}
+        }
 
 
-// DISPLAY EXPENSES
+        // READ EXPENSES
 
-function displayExpenses(data) {
+        async function loadExpenses() {
 
-    const list = document.getElementById('expenseList');
+            try {
 
-    if (data.length === 0) {
+                const result = await request('read');
 
-        list.innerHTML = `
+                expenses = result.expenses;
+
+                // UPDATE SUMMARY CARDS
+
+                document.getElementById('todayExpenses').textContent =
+                    formatMoney(result.today);
+
+                document.getElementById('monthlyExpenses').textContent =
+                    formatMoney(result.monthly);
+
+                document.getElementById('totalExpenses').textContent =
+                    formatMoney(result.total);
+
+                document.getElementById('expenseCount').textContent =
+                    result.count;
+
+
+                // DISPLAY TABLE
+
+                displayExpenses(expenses);
+
+            } catch (error) {
+
+                showToast(error.message, false);
+
+            }
+
+        }
+
+
+        // DISPLAY EXPENSES
+
+        function displayExpenses(data) {
+
+            const list = document.getElementById('expenseList');
+
+            if (data.length === 0) {
+
+                list.innerHTML = `
             <div class="text-center py-10">
 
                 <p class="text-3xl mb-3">✦</p>
@@ -1000,12 +984,12 @@ function displayExpenses(data) {
             </div>
         `;
 
-        return;
+                return;
 
-    }
+            }
 
 
-    list.innerHTML = data.map(expense => `
+            list.innerHTML = data.map(expense => `
 
         <div class="expense-item flex justify-between items-center gap-3 py-4">
 
@@ -1066,304 +1050,304 @@ function displayExpenses(data) {
 
     `).join('');
 
-}
+        }
 
 
-// CREATE / UPDATE EXPENSE
+        // CREATE / UPDATE EXPENSE
 
-document.getElementById('expenseForm').addEventListener(
-    'submit',
-    async function(e) {
+        document.getElementById('expenseForm').addEventListener(
+            'submit',
+            async function(e) {
 
-        e.preventDefault();
+                e.preventDefault();
 
-        const id = document.getElementById('expenseId').value;
+                const id = document.getElementById('expenseId').value;
 
-        const action = id ? 'update' : 'create';
+                const action = id ? 'update' : 'create';
 
-        const data = {
+                const data = {
 
-            id: id,
+                    id: id,
 
-            title: document.getElementById('expenseTitle').value.trim(),
+                    title: document.getElementById('expenseTitle').value.trim(),
 
-            amount: document.getElementById('expenseAmount').value,
+                    amount: document.getElementById('expenseAmount').value,
 
-            category: document.getElementById('expenseCategory').value,
+                    category: document.getElementById('expenseCategory').value,
 
-            expense_date: document.getElementById('expenseDate').value,
+                    expense_date: document.getElementById('expenseDate').value,
 
-            notes: document.getElementById('expenseNotes').value.trim()
+                    notes: document.getElementById('expenseNotes').value.trim()
 
-        };
-
-
-        const button = document.getElementById('expenseSubmitBtn');
-
-        button.disabled = true;
-
-        button.textContent = 'Processing...';
+                };
 
 
-        try {
+                const button = document.getElementById('expenseSubmitBtn');
 
-            const result = await request(action, data);
+                button.disabled = true;
 
-            showToast(result.message);
+                button.textContent = 'Processing...';
 
-            resetExpenseForm();
 
-            await loadExpenses();
+                try {
 
-        } catch(error) {
+                    const result = await request(action, data);
 
-            showToast(error.message, false);
+                    showToast(result.message);
 
-        } finally {
+                    resetExpenseForm();
 
-            button.disabled = false;
+                    await loadExpenses();
 
-            button.textContent = 'Add Expense';
+                } catch (error) {
+
+                    showToast(error.message, false);
+
+                } finally {
+
+                    button.disabled = false;
+
+                    button.textContent = 'Add Expense';
+
+                }
+
+            }
+        );
+
+
+        // EDIT EXPENSE
+
+        function editExpense(id) {
+
+            const expense = expenses.find(
+                item => Number(item.id) === Number(id)
+            );
+
+            if (!expense) {
+
+                showToast('Expense not found.', false);
+
+                return;
+
+            }
+
+
+            document.getElementById('expenseId').value =
+                expense.id;
+
+            document.getElementById('expenseTitle').value =
+                expense.title;
+
+            document.getElementById('expenseAmount').value =
+                expense.amount;
+
+            document.getElementById('expenseCategory').value =
+                expense.category;
+
+            document.getElementById('expenseDate').value =
+                expense.expense_date;
+
+            document.getElementById('expenseNotes').value =
+                expense.notes || '';
+
+
+            document.getElementById('expenseFormTitle').textContent =
+                'Update Daily Expense';
+
+            document.getElementById('expenseSubmitBtn').textContent =
+                'Update Expense';
+
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+
+
+            document.getElementById('expenses').scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
 
         }
 
-    }
-);
+
+        // DELETE EXPENSE
+
+        async function deleteExpense(id) {
+
+            if (!confirm('Are you sure you want to delete this expense?')) {
+                return;
+            }
+
+            try {
+
+                const result = await request('delete', {
+                    id: id
+                });
+
+                showToast(result.message);
+
+                await loadExpenses();
+
+            } catch (error) {
+
+                showToast(error.message, false);
+
+            }
+
+        }
 
 
-// EDIT EXPENSE
+        // RESET FORM
 
-function editExpense(id) {
+        function resetExpenseForm() {
 
-    const expense = expenses.find(
-        item => Number(item.id) === Number(id)
-    );
+            document.getElementById('expenseForm').reset();
 
-    if (!expense) {
+            document.getElementById('expenseId').value = '';
 
-        showToast('Expense not found.', false);
+            document.getElementById('expenseFormTitle').textContent =
+                'Add Daily Expense';
 
-        return;
+            document.getElementById('expenseSubmitBtn').textContent =
+                '+ Add Expense';
 
-    }
+            document.getElementById('cancelEditBtn').classList.add('hidden');
 
+            document.getElementById('expenseDate').value =
+                new Date().toLocaleDateString('en-CA');
 
-    document.getElementById('expenseId').value =
-        expense.id;
-
-    document.getElementById('expenseTitle').value =
-        expense.title;
-
-    document.getElementById('expenseAmount').value =
-        expense.amount;
-
-    document.getElementById('expenseCategory').value =
-        expense.category;
-
-    document.getElementById('expenseDate').value =
-        expense.expense_date;
-
-    document.getElementById('expenseNotes').value =
-        expense.notes || '';
+        }
 
 
-    document.getElementById('expenseFormTitle').textContent =
-        'Update Daily Expense';
+        // SEARCH EXPENSES
 
-    document.getElementById('expenseSubmitBtn').textContent =
-        'Update Expense';
+        document.getElementById('expenseSearch').addEventListener(
+            'input',
+            function() {
 
-    document.getElementById('cancelEditBtn').classList.remove('hidden');
+                const keyword = this.value.toLowerCase();
 
+                const filtered = expenses.filter(expense =>
 
-    document.getElementById('expenses').scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-    });
+                    expense.title.toLowerCase().includes(keyword) ||
 
-}
+                    expense.category.toLowerCase().includes(keyword) ||
 
+                    (expense.notes || '').toLowerCase().includes(keyword)
 
-// DELETE EXPENSE
+                );
 
-async function deleteExpense(id) {
+                displayExpenses(filtered);
 
-    if (!confirm('Are you sure you want to delete this expense?')) {
-        return;
-    }
-
-    try {
-
-        const result = await request('delete', {
-            id: id
-        });
-
-        showToast(result.message);
-
-        await loadExpenses();
-
-    } catch(error) {
-
-        showToast(error.message, false);
-
-    }
-
-}
-
-
-// RESET FORM
-
-function resetExpenseForm() {
-
-    document.getElementById('expenseForm').reset();
-
-    document.getElementById('expenseId').value = '';
-
-    document.getElementById('expenseFormTitle').textContent =
-        'Add Daily Expense';
-
-    document.getElementById('expenseSubmitBtn').textContent =
-        '+ Add Expense';
-
-    document.getElementById('cancelEditBtn').classList.add('hidden');
-
-    document.getElementById('expenseDate').value =
-        new Date().toLocaleDateString('en-CA');
-
-}
-
-
-// SEARCH EXPENSES
-
-document.getElementById('expenseSearch').addEventListener(
-    'input',
-    function() {
-
-        const keyword = this.value.toLowerCase();
-
-        const filtered = expenses.filter(expense =>
-
-            expense.title.toLowerCase().includes(keyword) ||
-
-            expense.category.toLowerCase().includes(keyword) ||
-
-            (expense.notes || '').toLowerCase().includes(keyword)
-
+            }
         );
 
-        displayExpenses(filtered);
 
-    }
-);
+        // =============================================
+        // TASK FRONTEND DEMO
+        // =============================================
 
-
-// =============================================
-// TASK FRONTEND DEMO
-// =============================================
-
-const taskForm = document.getElementById('taskForm');
+        const taskForm = document.getElementById('taskForm');
 
 
-taskForm.addEventListener('submit', function(e) {
+        taskForm.addEventListener('submit', function(e) {
 
-    e.preventDefault();
+            e.preventDefault();
 
-    const title = document.getElementById('taskTitle').value;
+            const title = document.getElementById('taskTitle').value;
 
-    const priority = document.getElementById('taskPriority').value;
+            const priority = document.getElementById('taskPriority').value;
 
-    const date = document.getElementById('taskDate').value;
-
-
-    const item = document.createElement('label');
-
-    item.className =
-        'flex justify-between items-center border-b border-white/10 pb-3 gap-3';
+            const date = document.getElementById('taskDate').value;
 
 
-    const left = document.createElement('div');
+            const item = document.createElement('label');
 
-    left.className = 'flex items-center gap-3';
-
-
-    const checkbox = document.createElement('input');
-
-    checkbox.type = 'checkbox';
-
-    checkbox.className = 'accent-yellow-500 w-4 h-4';
+            item.className =
+                'flex justify-between items-center border-b border-white/10 pb-3 gap-3';
 
 
-    const name = document.createElement('span');
+            const left = document.createElement('div');
 
-    name.className = 'text-sm';
-
-    name.textContent = title;
+            left.className = 'flex items-center gap-3';
 
 
-    checkbox.addEventListener('change', () => {
+            const checkbox = document.createElement('input');
 
-        name.classList.toggle('line-through', checkbox.checked);
+            checkbox.type = 'checkbox';
 
-        name.classList.toggle('text-gray-500', checkbox.checked);
-
-    });
+            checkbox.className = 'accent-yellow-500 w-4 h-4';
 
 
-    const taskDetails = document.createElement('div');
+            const name = document.createElement('span');
 
-    taskDetails.className = 'flex flex-col gap-1';
+            name.className = 'text-sm';
 
-    taskDetails.append(name);
-
-
-    const dueDate = document.createElement('span');
-
-    dueDate.className = 'text-xs text-gray-500';
-
-    dueDate.textContent = date;
-
-    taskDetails.append(dueDate);
+            name.textContent = title;
 
 
-    left.append(checkbox, taskDetails);
+            checkbox.addEventListener('change', () => {
+
+                name.classList.toggle('line-through', checkbox.checked);
+
+                name.classList.toggle('text-gray-500', checkbox.checked);
+
+            });
 
 
-    const badge = document.createElement('span');
+            const taskDetails = document.createElement('div');
 
-    badge.className = 'text-xs gold';
+            taskDetails.className = 'flex flex-col gap-1';
 
-    badge.textContent = priority;
-
-
-    item.append(left, badge);
+            taskDetails.append(name);
 
 
-    const list = document.getElementById('taskList');
+            const dueDate = document.createElement('span');
 
-    const emptyMessage = list.querySelector('p');
+            dueDate.className = 'text-xs text-gray-500';
 
-    if (emptyMessage) {
-        list.innerHTML = '';
-    }
+            dueDate.textContent = date;
 
-    list.prepend(item);
+            taskDetails.append(dueDate);
 
 
-    taskForm.reset();
-
-    showToast('Task created successfully!');
-
-});
+            left.append(checkbox, taskDetails);
 
 
-// INITIALIZE
+            const badge = document.createElement('span');
 
-document.getElementById('expenseDate').value =
-    new Date().toLocaleDateString('en-CA');
+            badge.className = 'text-xs gold';
 
-loadExpenses();
+            badge.textContent = priority;
 
-</script>
+
+            item.append(left, badge);
+
+
+            const list = document.getElementById('taskList');
+
+            const emptyMessage = list.querySelector('p');
+
+            if (emptyMessage) {
+                list.innerHTML = '';
+            }
+
+            list.prepend(item);
+
+
+            taskForm.reset();
+
+            showToast('Task created successfully!');
+
+        });
+
+
+        // INITIALIZE
+
+        document.getElementById('expenseDate').value =
+            new Date().toLocaleDateString('en-CA');
+
+        loadExpenses();
+    </script>
 
 </body>
+
 </html>
