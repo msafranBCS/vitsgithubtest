@@ -26,6 +26,11 @@
             ▤ Transactions
         </a>
 
+        <a href="logout.php"  class="flex items-center gap-3 text-gray-400 hover:text-red-400 transition">
+    <i class="fas fa-sign-out-alt"></i>
+    <span>Logout</span>
+</a>
+
     </nav>
 
     <div class="mt-auto glass p-4 rounded-2xl">
