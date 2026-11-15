@@ -10,15 +10,15 @@
 
     <nav class="mt-12 space-y-3">
 
-        <a href="index.php" class="sidebar-link">
+        <a href="index.php" class="sidebar-link dash">
             ◈ Dashboard
         </a>
 
-        <a href="expenses.php" class="sidebar-link">
+        <a href="expenses.php" class="sidebar-link select">
             ◷ Daily Expenses
         </a>
 
-        <a href="index.php#tasks" class="sidebar-link">
+        <a href="todo_crud.php" class="sidebar-link ">
             ✓ To-Do Tasks
         </a>
 
