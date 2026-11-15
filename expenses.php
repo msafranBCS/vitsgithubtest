@@ -1,26 +1,27 @@
+
 <?php
-/*
-|--------------------------------------------------------------------------
-| ELITE Daily - Daily Expenses CRUD
-|--------------------------------------------------------------------------
-| Update the database settings below to match your MySQL configuration.
-| The daily_expenses table is created automatically if it does not exist.
-*/
+// =============================================
+// DATABASE CONNECTION
+// =============================================
 
-session_start();
+$pdo = new PDO(
+    "mysql:host=localhost;
+    dbname=money;
+    charset=utf8mb4",
+    "root",
+    "",
+    [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false
+    ]
+);
 
-$dbHost = 'localhost';
-$dbUser = 'root';
-$dbPass = '';
-$dbName = 'money';
+// =============================================
+// CREATE EXPENSE TABLE
+// =============================================
 
-$conn = new mysqli($dbHost, $dbUser, $dbPass, $dbName);
-if ($conn->connect_error) {
-    die('Database connection failed: ' . htmlspecialchars($conn->connect_error));
-}
-$conn->set_charset('utf8mb4');
-
-$conn->query("
+$pdo->exec("
     CREATE TABLE IF NOT EXISTS daily_expenses (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(150) NOT NULL,
@@ -28,369 +29,1353 @@ $conn->query("
         category VARCHAR(50) NOT NULL,
         expense_date DATE NOT NULL,
         notes TEXT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_expense_date (expense_date),
+        INDEX idx_expense_category (category)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 ");
 
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
+// =============================================
+// AJAX CRUD HANDLER
+// =============================================
 
-function h($value) {
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-}
+if (isset($_GET['action'])) {
 
-function redirectWithMessage($message, $type = 'success') {
-    $_SESSION['flash_message'] = $message;
-    $_SESSION['flash_type'] = $type;
-    header('Location: expenses.php');
-    exit;
-}
+    header('Content-Type: application/json');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($_SESSION['csrf_token'], $token)) {
-        redirectWithMessage('Invalid request. Please try again.', 'error');
-    }
+    try {
 
-    $action = $_POST['action'] ?? '';
+        $action = $_GET['action'];
 
-    if ($action === 'create' || $action === 'update') {
-        $title = trim($_POST['title'] ?? '');
-        $amount = filter_var($_POST['amount'] ?? '', FILTER_VALIDATE_FLOAT);
-        $category = trim($_POST['category'] ?? '');
-        $expenseDate = $_POST['expense_date'] ?? '';
-        $notes = trim($_POST['notes'] ?? '');
+        // READ
+        if ($action === 'read') {
 
-        $allowedCategories = ['Food', 'Transport', 'Shopping', 'Bills', 'Education', 'Other'];
-        $dateObject = DateTime::createFromFormat('Y-m-d', $expenseDate);
-        $validDate = $dateObject && $dateObject->format('Y-m-d') === $expenseDate;
+            $stmt = $pdo->query("
+                SELECT * FROM daily_expenses
+                ORDER BY expense_date DESC, id DESC
+            ");
 
-        if ($title === '' || mb_strlen($title) > 150 || $amount === false || $amount <= 0 ||
-            !in_array($category, $allowedCategories, true) || !$validDate) {
-            redirectWithMessage('Please enter valid expense details.', 'error');
+            $expenses = $stmt->fetchAll();
+
+            $today = date('Y-m-d');
+            $month = date('Y-m');
+
+            $todayStmt = $pdo->prepare("
+                SELECT COALESCE(SUM(amount), 0)
+                FROM daily_expenses
+                WHERE expense_date = ?
+            ");
+            $todayStmt->execute([$today]);
+
+            $monthStmt = $pdo->prepare("
+                SELECT COALESCE(SUM(amount), 0)
+                FROM daily_expenses
+                WHERE DATE_FORMAT(expense_date, '%Y-%m') = ?
+            ");
+            $monthStmt->execute([$month]);
+
+            echo json_encode([
+                'success' => true,
+                'expenses' => $expenses,
+                'total' => array_sum(array_column($expenses, 'amount')),
+                'today' => $todayStmt->fetchColumn(),
+                'monthly' => $monthStmt->fetchColumn(),
+                'count' => count($expenses)
+            ]);
+
+            exit;
         }
 
-        if ($action === 'create') {
-            $stmt = $conn->prepare('INSERT INTO daily_expenses (title, amount, category, expense_date, notes) VALUES (?, ?, ?, ?, ?)');
-            $stmt->bind_param('sdsss', $title, $amount, $category, $expenseDate, $notes);
-            $stmt->execute();
-            $stmt->close();
-            redirectWithMessage('Expense added successfully!');
-        } else {
-            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-            if (!$id || $id < 1) {
-                redirectWithMessage('Invalid expense selected.', 'error');
+        // RECEIVE JSON
+        $data = json_decode(
+            file_get_contents('php://input'),
+            true
+        ) ?? [];
+
+        $title = trim($data['title'] ?? '');
+        $amount = $data['amount'] ?? '';
+        $category = trim($data['category'] ?? '');
+        $date = $data['expense_date'] ?? '';
+        $notes = trim($data['notes'] ?? '');
+
+        // VALIDATION
+        if (in_array($action, ['create', 'update'], true)) {
+
+            $dateObj = DateTime::createFromFormat('!Y-m-d', $date);
+
+            if (
+                $title === '' ||
+                strlen($title) > 150 ||
+                $category === '' ||
+                strlen($category) > 50 ||
+                !is_numeric($amount) ||
+                !is_finite((float)$amount) ||
+                (float)$amount <= 0 ||
+                (float)$amount > 9999999999.99 ||
+                !$dateObj ||
+                $dateObj->format('Y-m-d') !== $date
+            ) {
+                throw new Exception('Please enter valid expense details.');
             }
-            $stmt = $conn->prepare('UPDATE daily_expenses SET title = ?, amount = ?, category = ?, expense_date = ?, notes = ? WHERE id = ?');
-            $stmt->bind_param('sdsssi', $title, $amount, $category, $expenseDate, $notes, $id);
-            $stmt->execute();
-            $updated = $stmt->affected_rows;
-            $stmt->close();
-            redirectWithMessage('Expense updated successfully!');
         }
-    }
 
-    if ($action === 'delete') {
-        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-        if (!$id || $id < 1) {
-            redirectWithMessage('Invalid expense selected.', 'error');
+        // CREATE
+        if ($action === 'create') {
+
+            $stmt = $pdo->prepare("
+                INSERT INTO daily_expenses
+                (title, amount, category, expense_date, notes)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+
+            $stmt->execute([
+                $title,
+                $amount,
+                $category,
+                $date,
+                $notes ?: null
+            ]);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Expense added successfully!'
+            ]);
+
+            exit;
         }
-        $stmt = $conn->prepare('DELETE FROM daily_expenses WHERE id = ?');
-        $stmt->bind_param('i', $id);
-        $stmt->execute();
-        $deleted = $stmt->affected_rows;
-        $stmt->close();
-        redirectWithMessage($deleted ? 'Expense deleted successfully!' : 'Expense was not found.', $deleted ? 'success' : 'error');
+
+        // UPDATE
+        if ($action === 'update') {
+
+            $id = filter_var(
+                $data['id'] ?? '',
+                FILTER_VALIDATE_INT
+            );
+
+            if (!$id || $id < 1) {
+                throw new Exception('Invalid expense ID.');
+            }
+
+            $stmt = $pdo->prepare("
+                UPDATE daily_expenses
+                SET title = ?,
+                    amount = ?,
+                    category = ?,
+                    expense_date = ?,
+                    notes = ?
+                WHERE id = ?
+            ");
+
+            $stmt->execute([
+                $title,
+                $amount,
+                $category,
+                $date,
+                $notes ?: null,
+                $id
+            ]);
+
+            if ($stmt->rowCount() === 0) {
+
+                $check = $pdo->prepare("
+                    SELECT id FROM daily_expenses WHERE id = ?
+                ");
+
+                $check->execute([$id]);
+
+                if (!$check->fetch()) {
+                    throw new Exception('Expense not found.');
+                }
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Expense updated successfully!'
+            ]);
+
+            exit;
+        }
+
+        // DELETE
+        if ($action === 'delete') {
+
+            $id = filter_var(
+                $data['id'] ?? '',
+                FILTER_VALIDATE_INT
+            );
+
+            if (!$id || $id < 1) {
+                throw new Exception('Invalid expense ID.');
+            }
+
+            $stmt = $pdo->prepare("
+                DELETE FROM daily_expenses WHERE id = ?
+            ");
+
+            $stmt->execute([$id]);
+
+            if ($stmt->rowCount() === 0) {
+                throw new Exception('Expense not found.');
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Expense deleted successfully!'
+            ]);
+
+            exit;
+        }
+
+        throw new Exception('Invalid action.');
+
+    } catch (Throwable $e) {
+
+        http_response_code(400);
+
+        echo json_encode([
+            'success' => false,
+            'message' => $e instanceof PDOException
+                ? 'Database operation failed.'
+                : $e->getMessage()
+        ]);
+
+        exit;
     }
 }
 
-$today = date('Y-m-d');
-$monthStart = date('Y-m-01');
-$monthEnd = date('Y-m-t');
-
-$stmt = $conn->prepare('SELECT COALESCE(SUM(amount), 0) AS total FROM daily_expenses WHERE expense_date = ?');
-$stmt->bind_param('s', $today);
-$stmt->execute();
-$todayTotal = (float)$stmt->get_result()->fetch_assoc()['total'];
-$stmt->close();
-
-$stmt = $conn->prepare('SELECT COALESCE(SUM(amount), 0) AS total FROM daily_expenses WHERE expense_date BETWEEN ? AND ?');
-$stmt->bind_param('ss', $monthStart, $monthEnd);
-$stmt->execute();
-$monthTotal = (float)$stmt->get_result()->fetch_assoc()['total'];
-$stmt->close();
-
-$search = trim($_GET['search'] ?? '');
-$filterCategory = trim($_GET['category'] ?? '');
-$filterDate = trim($_GET['date'] ?? '');
-
-$sql = 'SELECT id, title, amount, category, expense_date, notes FROM daily_expenses WHERE 1=1';
-$params = [];
-$types = '';
-
-if ($search !== '') {
-    $sql .= ' AND title LIKE ?';
-    $params[] = '%' . $search . '%';
-    $types .= 's';
-}
-$categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Education', 'Other'];
-if (in_array($filterCategory, $categories, true)) {
-    $sql .= ' AND category = ?';
-    $params[] = $filterCategory;
-    $types .= 's';
-}
-if ($filterDate !== '' && DateTime::createFromFormat('Y-m-d', $filterDate)) {
-    $sql .= ' AND expense_date = ?';
-    $params[] = $filterDate;
-    $types .= 's';
-}
-$sql .= ' ORDER BY expense_date DESC, id DESC';
-
-$stmt = $conn->prepare($sql);
-if ($params) {
-    $stmt->bind_param($types, ...$params);
-}
-$stmt->execute();
-$result = $stmt->get_result();
-$expenses = $result->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
-
-$flash = $_SESSION['flash_message'] ?? '';
-$flashType = $_SESSION['flash_type'] ?? 'success';
-unset($_SESSION['flash_message'], $_SESSION['flash_type']);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Expenses | ELITE Daily</title>
+
+    <title>Elite Daily | Expense & Tasks</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
-        body { font-family: 'Inter', sans-serif; background: #0b0e13; }
-        .glass { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(15px); }
-        .gold { color: #d6b36a; }
-        .gold-bg { background: linear-gradient(135deg,#e4c47d,#a98238); }
-        input, select, textarea { color-scheme: dark; }
-        .field { width:100%; margin-top:8px; padding:12px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); outline:none; }
-        .field:focus { border-color:#a98238; }
-        .modal-backdrop { background:rgba(0,0,0,.75); }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0b0e13;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+        }
+
+        .gold {
+            color: #d6b36a;
+        }
+
+        .gold-bg {
+            background: linear-gradient(135deg, #e4c47d, #a98238);
+        }
+
+        input, select, textarea {
+            color-scheme: dark;
+        }
+
+        .expense-item {
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            transition: background 0.2s ease;
+        }
+
+        .expense-item:hover {
+            background: rgba(255,255,255,0.025);
+        }
+
+        .gold-btn {
+            background: linear-gradient(135deg, #e4c47d, #a98238);
+            color: #090b0f;
+            transition: all .2s ease;
+        }
+
+        .gold-btn:hover {
+            opacity: .9;
+            transform: translateY(-1px);
+        }
+
+        #toast {
+            transition: all .3s ease;
+        }
+        body {
+    font-family: 'Inter', sans-serif;
+    background: #0b0e13;
+}
+
+.glass {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(15px);
+}
+
+.gold {
+    color: #d6b36a;
+}
+
+.gold-bg {
+    background: linear-gradient(135deg,#e4c47d,#a98238);
+}
+
+.gold-border {
+    border-color: rgba(214,179,106,0.35);
+}
+
+.input-dark {
+    background: #141923;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    outline: none;
+}
+
+.input-dark:focus {
+    border-color: #d6b36a;
+}
+.input-dark option {
+    background: #141923;
+}
+
+.gold-button {
+    background: linear-gradient(135deg,#e4c47d,#a98238);
+    color: #111;
+    font-weight: 700;
+    transition: 0.3s;
+}
+.gold-button:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+.sidebar-link {
+    display: block;
+    padding: 13px;
+    border-radius: 12px;
+    color: #9ca3af;
+    transition: 0.2s;
+}
+
+.sidebar-link:hover,
+.sidebar-link.select{
+    background: linear-gradient(135deg,#e4c47d,#a98238);
+    color: #111;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 750px;
+}
+
+
+
+
     </style>
+
 </head>
+
+
 <body class="text-white min-h-screen">
+
 <div class="flex min-h-screen">
-   <!-- side bar -->
-    <?php
-     include 'include/sidebar.php';
-      ?>
+
+    <!-- SIDEBAR -->
+
+    <?php include 'include/sidebar.php'; ?>
+
+
+    <!-- MAIN CONTENT -->
 
     <main class="flex-1 p-5 md:p-10">
-        <header class="flex justify-between items-center mb-8">
+
+
+        <!-- HEADER -->
+
+        <header class="flex justify-between items-center mb-10">
+
             <div>
-                <p class="text-gray-500 text-sm"><?= strtoupper(date('l, F d')) ?></p>
-                <h2 class="text-2xl md:text-3xl font-bold mt-2">Daily Expenses</h2>
-                <p class="text-gray-400 text-sm mt-1">Track, manage and review your daily spending.</p>
+
+                <p class="text-gray-500 text-sm uppercase">
+                    <?= strtoupper(date('l, F d')) ?>
+                </p>
+
+                <h2 class="text-2xl md:text-3xl font-bold mt-2">
+                    Good <?= date('H') < 12 ? 'Morning' : (date('H') < 17 ? 'Afternoon' : 'Evening') ?> 👋
+                </h2>
+
+                <p class="text-gray-400 text-sm mt-1">
+                    Welcome back. Here's your daily overview.
+                </p>
+
             </div>
+
             <div class="hidden sm:block text-right">
-                <p class="gold text-sm font-semibold">PREMIUM EDITION</p>
-                <p class="text-gray-500 text-xs mt-1">PERSONAL DASHBOARD</p>
+
+                <p class="gold text-sm font-semibold">
+                    PREMIUM EDITION
+                </p>
+
+                <p class="text-gray-500 text-xs mt-1">
+                    PERSONAL DASHBOARD
+                </p>
+
             </div>
+
         </header>
 
-        <?php if ($flash): ?>
-            <div id="flashMessage" class="mb-6 rounded-xl border px-4 py-3 text-sm <?= $flashType === 'error' ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-green-500/30 bg-green-500/10 text-green-300' ?>">
-                <?= h($flash) ?>
-            </div>
-        <?php endif; ?>
 
-        <section class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
+        <!-- SUMMARY CARDS -->
+
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+
+
+            <!-- TODAY -->
+
             <div class="glass p-6 rounded-2xl">
-                <p class="text-gray-400 text-sm">Today's Expenses</p>
-                <h2 class="text-3xl font-bold mt-3">Rs. <?= number_format($todayTotal, 2) ?></h2>
-                <p class="text-red-400 text-xs mt-3">Daily spending</p>
+
+                <p class="text-gray-400 text-sm">
+                    Today's Expenses
+                </p>
+
+                <h2 id="todayExpenses"
+                    class="text-2xl md:text-3xl font-bold mt-3">
+                    Rs. 0.00
+                </h2>
+
+                <p class="text-red-400 text-xs mt-3">
+                    ↑ Today's spending
+                </p>
+
             </div>
+
+
+            <!-- MONTHLY -->
+
             <div class="glass p-6 rounded-2xl">
-                <p class="text-gray-400 text-sm">Monthly Expenses</p>
-                <h2 class="text-3xl font-bold mt-3">Rs. <?= number_format($monthTotal, 2) ?></h2>
-                <p class="text-gray-500 text-xs mt-3"><?= h(date('F Y')) ?></p>
+
+                <p class="text-gray-400 text-sm">
+                    Monthly Expenses
+                </p>
+
+                <h2 id="monthlyExpenses"
+                    class="text-2xl md:text-3xl font-bold mt-3">
+                    Rs. 0.00
+                </h2>
+
+                <p class="text-gray-500 text-xs mt-3">
+                    <?= date('F Y') ?>
+                </p>
+
             </div>
+
+
+            <!-- ALL EXPENSES -->
+
+            <div class="glass p-6 rounded-2xl">
+
+                <p class="text-gray-400 text-sm">
+                    Total Expenses
+                </p>
+
+                <h2 id="totalExpenses"
+                    class="text-2xl md:text-3xl font-bold mt-3 gold">
+                    Rs. 0.00
+                </h2>
+
+                <p class="text-green-400 text-xs mt-3">
+                    All recorded expenses
+                </p>
+
+            </div>
+
+
+            <!-- RECORD COUNT -->
+
+            <div class="glass p-6 rounded-2xl">
+
+                <p class="text-gray-400 text-sm">
+                    Expense Records
+                </p>
+
+                <h2 id="expenseCount"
+                    class="text-2xl md:text-3xl font-bold mt-3">
+                    0
+                </h2>
+
+                <p class="text-gray-500 text-xs mt-3">
+                    Total transactions
+                </p>
+
+            </div>
+
+
         </section>
 
-        <section class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-            <div class="glass p-6 rounded-2xl xl:col-span-1">
+
+        <!-- FORMS -->
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+
+            <!-- EXPENSE FORM -->
+
+            <div id="expenses" class="glass p-6 rounded-2xl">
+
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-bold">Add Daily Expense</h3>
-                    <span class="gold text-xs">✦ EXPENSE</span>
-                </div>
-                <form method="POST" class="space-y-4">
-                    <input type="hidden" name="csrf_token" value="<?= h($_SESSION['csrf_token']) ?>">
-                    <input type="hidden" name="action" value="create">
-                    <div>
-                        <label class="text-xs text-gray-400">Expense Title</label>
-                        <input class="field" name="title" maxlength="150" required placeholder="e.g. Lunch, Transport">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400">Amount (LKR)</label>
-                        <input class="field" name="amount" type="number" min="0.01" step="0.01" required placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400">Category</label>
-                        <select class="field" name="category" required>
-                            <?php foreach ($categories as $category): ?>
-                                <option value="<?= h($category) ?>"><?= h($category) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400">Expense Date</label>
-                        <input class="field" name="expense_date" type="date" value="<?= h($today) ?>" required>
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400">Notes (Optional)</label>
-                        <textarea class="field" name="notes" rows="2" placeholder="Add a short note..."></textarea>
-                    </div>
-                    <button class="gold-bg text-black w-full p-3 rounded-xl font-bold hover:opacity-90 transition">+ Add Expense</button>
-                </form>
-            </div>
 
-            <div class="glass p-6 rounded-2xl xl:col-span-2">
-                <div class="flex justify-between items-center mb-5">
-                    <h3 class="text-lg font-bold">Expense History</h3>
-                    <span class="gold text-xs">✦ TRANSACTIONS</span>
-                </div>
-                <form method="GET" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-                    <input class="field mt-0" name="search" value="<?= h($search) ?>" placeholder="Search title...">
-                    <select class="field mt-0" name="category">
-                        <option value="">All Categories</option>
-                        <?php foreach ($categories as $category): ?>
-                            <option value="<?= h($category) ?>" <?= $filterCategory === $category ? 'selected' : '' ?>><?= h($category) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <input class="field mt-0" type="date" name="date" value="<?= h($filterDate) ?>">
-                    <div class="sm:col-span-3 flex gap-2">
-                        <button class="gold-bg text-black px-5 py-2 rounded-xl text-sm font-bold">Apply Filters</button>
-                        <a href="expenses.php" class="border border-white/10 px-5 py-2 rounded-xl text-sm text-gray-300 hover:bg-white/5">Reset</a>
-                    </div>
-                </form>
+                    <h3 id="expenseFormTitle" class="text-lg font-bold">
+                        Add Daily Expense
+                    </h3>
 
-                <div class="space-y-3">
-                    <?php if (!$expenses): ?>
-                        <div class="text-center py-12 text-gray-500">
-                            <div class="text-3xl mb-3">◷</div>
-                            <p class="text-sm">No expenses found. Add your first expense.</p>
+                    <span class="gold text-sm">
+                        ✦ EXPENSE
+                    </span>
+
+                </div>
+
+
+                <form id="expenseForm" class="space-y-4">
+
+                    <input type="hidden" id="expenseId">
+
+
+                    <!-- TITLE -->
+
+                    <div>
+
+                        <label class="text-xs text-gray-400">
+                            Expense Title
+                        </label>
+
+                        <input
+                            id="expenseTitle"
+                            type="text"
+                            maxlength="150"
+                            required
+                            placeholder="e.g. Lunch, Transport"
+                            class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-yellow-600"
+                        >
+
+                    </div>
+
+
+                    <!-- AMOUNT AND CATEGORY -->
+
+                    <div class="grid grid-cols-2 gap-4">
+
+                        <div>
+
+                            <label class="text-xs text-gray-400">
+                                Amount (LKR)
+                            </label>
+
+                            <input
+                                id="expenseAmount"
+                                type="number"
+                                min="0.01"
+                                max="9999999999.99"
+                                step="0.01"
+                                required
+                                placeholder="0.00"
+                                class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-yellow-600"
+                            >
+
                         </div>
-                    <?php else: ?>
-                        <?php foreach ($expenses as $expense): ?>
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                                <div class="min-w-0">
-                                    <p class="font-semibold text-sm"><?= h($expense['title']) ?></p>
-                                    <p class="text-xs text-gray-500 mt-1">
-                                        <?= h($expense['category']) ?> · <?= h(date('d M Y', strtotime($expense['expense_date']))) ?>
-                                    </p>
-                                    <?php if ($expense['notes'] !== ''): ?>
-                                        <p class="text-xs text-gray-500 mt-1"><?= h($expense['notes']) ?></p>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="flex items-center justify-between sm:justify-end gap-4">
-                                    <span class="gold font-bold text-sm whitespace-nowrap">Rs. <?= number_format((float)$expense['amount'], 2) ?></span>
-                                    <button type="button"
-                                        class="edit-btn text-xs border border-white/10 rounded-lg px-3 py-2 hover:bg-white/10"
-                                        data-id="<?= (int)$expense['id'] ?>"
-                                        data-title="<?= h($expense['title']) ?>"
-                                        data-amount="<?= h($expense['amount']) ?>"
-                                        data-category="<?= h($expense['category']) ?>"
-                                        data-date="<?= h($expense['expense_date']) ?>"
-                                        data-notes="<?= h($expense['notes']) ?>">Edit</button>
-                                    <form method="POST" onsubmit="return confirm('Are you sure you want to delete this expense?');">
-                                        <input type="hidden" name="csrf_token" value="<?= h($_SESSION['csrf_token']) ?>">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="id" value="<?= (int)$expense['id'] ?>">
-                                        <button class="text-xs text-red-400 border border-red-400/20 rounded-lg px-3 py-2 hover:bg-red-500/10">Delete</button>
-                                    </form>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-                <p class="text-xs text-gray-600 mt-5">Showing <?= count($expenses) ?> expense(s).</p>
+
+
+                        <div>
+
+                            <label class="text-xs text-gray-400">
+                                Category
+                            </label>
+
+                            <select
+                                id="expenseCategory"
+                                required
+                                class="w-full mt-2 p-3 rounded-xl bg-[#171b22] border border-white/10 outline-none"
+                            >
+
+                                <option value="">Select</option>
+                                <option value="Food">Food</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Bills">Bills</option>
+                                <option value="Education">Education</option>
+                                <option value="Health">Health</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Other">Other</option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- DATE -->
+
+                    <div>
+
+                        <label class="text-xs text-gray-400">
+                            Expense Date
+                        </label>
+
+                        <input
+                            id="expenseDate"
+                            type="date"
+                            required
+                            class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none"
+                        >
+
+                    </div>
+
+
+                    <!-- NOTES -->
+
+                    <div>
+
+                        <label class="text-xs text-gray-400">
+                            Notes
+                        </label>
+
+                        <textarea
+                            id="expenseNotes"
+                            rows="2"
+                            placeholder="Additional information..."
+                            class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-yellow-600"
+                        ></textarea>
+
+                    </div>
+
+
+                    <!-- BUTTONS -->
+
+                    <div class="flex gap-3">
+
+                        <button
+                            type="submit"
+                            id="expenseSubmitBtn"
+                            class="gold-bg text-black w-full p-3 rounded-xl font-bold hover:opacity-90"
+                        >
+                            + Add Expense
+                        </button>
+
+                        <button
+                            type="button"
+                            id="cancelEditBtn"
+                            onclick="resetExpenseForm()"
+                            class="hidden px-5 py-3 rounded-xl border border-white/10 text-gray-300 hover:bg-white/5"
+                        >
+                            Cancel
+                        </button>
+
+                    </div>
+
+                </form>
+
             </div>
+
+
+            <!-- TASK FORM -->
+
+            <div id="tasks" class="glass p-6 rounded-2xl">
+
+                <div class="flex justify-between mb-6">
+
+                    <h3 class="text-lg font-bold">
+                        Create New Task
+                    </h3>
+
+                    <span class="gold">
+                        ✦ PRODUCTIVITY
+                    </span>
+
+                </div>
+
+
+                <form id="taskForm" class="space-y-4">
+
+                    <div>
+
+                        <label class="text-xs text-gray-400">
+                            Task Name
+                        </label>
+
+                        <input
+                            id="taskTitle"
+                            required
+                            placeholder="What needs to be done?"
+                            class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10 outline-none"
+                        >
+
+                    </div>
+
+
+                    <div class="grid grid-cols-2 gap-4">
+
+                        <div>
+
+                            <label class="text-xs text-gray-400">
+                                Due Date
+                            </label>
+
+                            <input
+                                id="taskDate"
+                                type="date"
+                                required
+                                class="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/10"
+                            >
+
+                        </div>
+
+
+                        <div>
+
+                            <label class="text-xs text-gray-400">
+                                Priority
+                            </label>
+
+                            <select
+                                id="taskPriority"
+                                class="w-full mt-2 p-3 rounded-xl bg-[#171b22] border border-white/10"
+                            >
+
+                                <option>Low</option>
+                                <option>Medium</option>
+                                <option>High</option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <button class="gold-bg text-black w-full p-3 rounded-xl font-bold hover:opacity-90">
+                        + Create Task
+                    </button>
+
+                </form>
+
+            </div>
+
         </section>
 
-        <footer class="text-center text-gray-600 text-xs mt-12 pb-5">© <?= date('Y') ?> ELITE DAILY. Crafted for better living.</footer>
+
+        <!-- RECENT DATA -->
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+
+            <!-- RECENT EXPENSES -->
+
+            <div id="transactions" class="glass p-6 rounded-2xl">
+
+                <div class="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+
+                    <h3 class="font-bold text-lg">
+                        Recent Expenses
+                    </h3>
+
+                    <input
+                        id="expenseSearch"
+                        type="text"
+                        placeholder="Search expenses..."
+                        class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-yellow-600"
+                    >
+
+                </div>
+
+
+                <div id="expenseList" class="space-y-4">
+
+                    <p class="text-gray-500 text-sm">
+                        Loading expenses...
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- TASKS -->
+
+            <div class="glass p-6 rounded-2xl">
+
+                <h3 class="font-bold text-lg mb-6">
+                    Today's Tasks
+                </h3>
+
+                <div id="taskList" class="space-y-4">
+
+                    <p class="text-gray-500 text-sm">
+                        Your tasks will appear here.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- FOOTER -->
+
+        <footer class="text-center text-gray-600 text-xs mt-12 pb-5">
+
+            © <?= date('Y') ?> ELITE DAILY. Crafted for better living.
+
+        </footer>
+
+
     </main>
+
 </div>
 
-<!-- Edit Expense Modal -->
-<div id="editModal" class="hidden fixed inset-0 z-50 modal-backdrop items-center justify-center p-4">
-    <div class="glass bg-[#11151c] w-full max-w-lg rounded-2xl p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-lg font-bold">Edit Expense</h3>
-            <button type="button" id="closeModal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-        </div>
-        <form method="POST" class="space-y-4">
-            <input type="hidden" name="csrf_token" value="<?= h($_SESSION['csrf_token']) ?>">
-            <input type="hidden" name="action" value="update">
-            <input type="hidden" name="id" id="editId">
-            <div>
-                <label class="text-xs text-gray-400">Expense Title</label>
-                <input class="field" name="title" id="editTitle" maxlength="150" required>
-            </div>
-            <div>
-                <label class="text-xs text-gray-400">Amount (LKR)</label>
-                <input class="field" name="amount" id="editAmount" type="number" min="0.01" step="0.01" required>
-            </div>
-            <div>
-                <label class="text-xs text-gray-400">Category</label>
-                <select class="field" name="category" id="editCategory" required>
-                    <?php foreach ($categories as $category): ?>
-                        <option value="<?= h($category) ?>"><?= h($category) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div>
-                <label class="text-xs text-gray-400">Expense Date</label>
-                <input class="field" name="expense_date" id="editDate" type="date" required>
-            </div>
-            <div>
-                <label class="text-xs text-gray-400">Notes (Optional)</label>
-                <textarea class="field" name="notes" id="editNotes" rows="2"></textarea>
-            </div>
-            <div class="flex gap-3">
-                <button class="gold-bg text-black flex-1 p-3 rounded-xl font-bold">Save Changes</button>
-                <button type="button" id="cancelModal" class="border border-white/10 flex-1 p-3 rounded-xl text-gray-300">Cancel</button>
-            </div>
-        </form>
-    </div>
-</div>
+
+<!-- TOAST NOTIFICATION -->
+
+<div
+    id="toast"
+    role="status"
+    aria-live="polite"
+    class="hidden fixed top-5 right-5 px-6 py-4 rounded-xl text-black font-semibold shadow-lg z-50"
+></div>
+
 
 <script>
-const modal = document.getElementById('editModal');
-function closeEditModal() {
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-}
-document.querySelectorAll('.edit-btn').forEach(button => {
-    button.addEventListener('click', () => {
-        document.getElementById('editId').value = button.dataset.id;
-        document.getElementById('editTitle').value = button.dataset.title;
-        document.getElementById('editAmount').value = button.dataset.amount;
-        document.getElementById('editCategory').value = button.dataset.category;
-        document.getElementById('editDate').value = button.dataset.date;
-        document.getElementById('editNotes').value = button.dataset.notes;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+
+// =============================================
+// EXPENSE CRUD JAVASCRIPT
+// =============================================
+
+const API = window.location.pathname;
+
+let expenses = [];
+
+let toastTimer;
+
+
+// FORMAT CURRENCY
+
+function formatMoney(value) {
+
+    return 'Rs. ' + Number(value).toLocaleString('en-LK', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     });
+
+}
+
+
+// TOAST NOTIFICATION
+
+function showToast(message, success = true) {
+
+    const toast = document.getElementById('toast');
+
+    clearTimeout(toastTimer);
+
+    toast.textContent = message;
+
+    toast.className = `
+        fixed top-5 right-5 px-6 py-4 rounded-xl
+        font-semibold shadow-lg z-50
+        ${success
+            ? 'bg-[#d6b36a] text-black'
+            : 'bg-red-500 text-white'}
+    `;
+
+    toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 3000);
+
+}
+
+
+// API REQUEST
+
+async function request(action, data = {}) {
+
+    const response = await fetch(
+        API + '?action=' + encodeURIComponent(action),
+        {
+            method: action === 'read' ? 'GET' : 'POST',
+
+            headers: {
+                'Content-Type': 'application/json'
+            },
+
+            body: action === 'read'
+                ? null
+                : JSON.stringify(data)
+        }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Request failed.');
+    }
+
+    return result;
+
+}
+
+
+// ESCAPE HTML
+
+function escapeHTML(value) {
+
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    })[char]);
+
+}
+
+
+// READ EXPENSES
+
+async function loadExpenses() {
+
+    try {
+
+        const result = await request('read');
+
+        expenses = result.expenses;
+
+        // UPDATE SUMMARY CARDS
+
+        document.getElementById('todayExpenses').textContent =
+            formatMoney(result.today);
+
+        document.getElementById('monthlyExpenses').textContent =
+            formatMoney(result.monthly);
+
+        document.getElementById('totalExpenses').textContent =
+            formatMoney(result.total);
+
+        document.getElementById('expenseCount').textContent =
+            result.count;
+
+
+        // DISPLAY TABLE
+
+        displayExpenses(expenses);
+
+    } catch(error) {
+
+        showToast(error.message, false);
+
+    }
+
+}
+
+
+// DISPLAY EXPENSES
+
+function displayExpenses(data) {
+
+    const list = document.getElementById('expenseList');
+
+    if (data.length === 0) {
+
+        list.innerHTML = `
+            <div class="text-center py-10">
+
+                <p class="text-3xl mb-3">✦</p>
+
+                <p class="text-gray-400 text-sm">
+                    No expenses found.
+                </p>
+
+                <p class="text-gray-600 text-xs mt-2">
+                    Add your first expense above.
+                </p>
+
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    list.innerHTML = data.map(expense => `
+
+        <div class="expense-item flex justify-between items-center gap-3 py-4">
+
+            <div class="min-w-0">
+
+                <p class="font-semibold text-sm truncate">
+                    ${escapeHTML(expense.title)}
+                </p>
+
+                <div class="flex flex-wrap gap-2 mt-2">
+
+                    <span class="text-xs gold">
+                        ${escapeHTML(expense.category)}
+                    </span>
+
+                    <span class="text-xs text-gray-500">
+                        ${escapeHTML(expense.expense_date)}
+                    </span>
+
+                </div>
+
+                ${expense.notes ? `
+                    <p class="text-xs text-gray-500 mt-2 break-words">
+                        ${escapeHTML(expense.notes)}
+                    </p>
+                ` : ''}
+
+            </div>
+
+
+            <div class="text-right flex-shrink-0">
+
+                <p class="gold font-bold text-sm">
+                    ${formatMoney(expense.amount)}
+                </p>
+
+                <div class="flex gap-3 justify-end mt-3">
+
+                    <button
+                        onclick="editExpense(${Number(expense.id)})"
+                        class="text-blue-400 text-xs hover:text-blue-300"
+                    >
+                        Edit
+                    </button>
+
+                    <button
+                        onclick="deleteExpense(${Number(expense.id)})"
+                        class="text-red-400 text-xs hover:text-red-300"
+                    >
+                        Delete
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `).join('');
+
+}
+
+
+// CREATE / UPDATE EXPENSE
+
+document.getElementById('expenseForm').addEventListener(
+    'submit',
+    async function(e) {
+
+        e.preventDefault();
+
+        const id = document.getElementById('expenseId').value;
+
+        const action = id ? 'update' : 'create';
+
+        const data = {
+
+            id: id,
+
+            title: document.getElementById('expenseTitle').value.trim(),
+
+            amount: document.getElementById('expenseAmount').value,
+
+            category: document.getElementById('expenseCategory').value,
+
+            expense_date: document.getElementById('expenseDate').value,
+
+            notes: document.getElementById('expenseNotes').value.trim()
+
+        };
+
+
+        const button = document.getElementById('expenseSubmitBtn');
+
+        button.disabled = true;
+
+        button.textContent = 'Processing...';
+
+
+        try {
+
+            const result = await request(action, data);
+
+            showToast(result.message);
+
+            resetExpenseForm();
+
+            await loadExpenses();
+
+        } catch(error) {
+
+            showToast(error.message, false);
+
+        } finally {
+
+            button.disabled = false;
+
+            button.textContent = 'Add Expense';
+
+        }
+
+    }
+);
+
+
+// EDIT EXPENSE
+
+function editExpense(id) {
+
+    const expense = expenses.find(
+        item => Number(item.id) === Number(id)
+    );
+
+    if (!expense) {
+
+        showToast('Expense not found.', false);
+
+        return;
+
+    }
+
+
+    document.getElementById('expenseId').value =
+        expense.id;
+
+    document.getElementById('expenseTitle').value =
+        expense.title;
+
+    document.getElementById('expenseAmount').value =
+        expense.amount;
+
+    document.getElementById('expenseCategory').value =
+        expense.category;
+
+    document.getElementById('expenseDate').value =
+        expense.expense_date;
+
+    document.getElementById('expenseNotes').value =
+        expense.notes || '';
+
+
+    document.getElementById('expenseFormTitle').textContent =
+        'Update Daily Expense';
+
+    document.getElementById('expenseSubmitBtn').textContent =
+        'Update Expense';
+
+    document.getElementById('cancelEditBtn').classList.remove('hidden');
+
+
+    document.getElementById('expenses').scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+    });
+
+}
+
+
+// DELETE EXPENSE
+
+async function deleteExpense(id) {
+
+    if (!confirm('Are you sure you want to delete this expense?')) {
+        return;
+    }
+
+    try {
+
+        const result = await request('delete', {
+            id: id
+        });
+
+        showToast(result.message);
+
+        await loadExpenses();
+
+    } catch(error) {
+
+        showToast(error.message, false);
+
+    }
+
+}
+
+
+// RESET FORM
+
+function resetExpenseForm() {
+
+    document.getElementById('expenseForm').reset();
+
+    document.getElementById('expenseId').value = '';
+
+    document.getElementById('expenseFormTitle').textContent =
+        'Add Daily Expense';
+
+    document.getElementById('expenseSubmitBtn').textContent =
+        '+ Add Expense';
+
+    document.getElementById('cancelEditBtn').classList.add('hidden');
+
+    document.getElementById('expenseDate').value =
+        new Date().toLocaleDateString('en-CA');
+
+}
+
+
+// SEARCH EXPENSES
+
+document.getElementById('expenseSearch').addEventListener(
+    'input',
+    function() {
+
+        const keyword = this.value.toLowerCase();
+
+        const filtered = expenses.filter(expense =>
+
+            expense.title.toLowerCase().includes(keyword) ||
+
+            expense.category.toLowerCase().includes(keyword) ||
+
+            (expense.notes || '').toLowerCase().includes(keyword)
+
+        );
+
+        displayExpenses(filtered);
+
+    }
+);
+
+
+// =============================================
+// TASK FRONTEND DEMO
+// =============================================
+
+const taskForm = document.getElementById('taskForm');
+
+
+taskForm.addEventListener('submit', function(e) {
+
+    e.preventDefault();
+
+    const title = document.getElementById('taskTitle').value;
+
+    const priority = document.getElementById('taskPriority').value;
+
+    const date = document.getElementById('taskDate').value;
+
+
+    const item = document.createElement('label');
+
+    item.className =
+        'flex justify-between items-center border-b border-white/10 pb-3 gap-3';
+
+
+    const left = document.createElement('div');
+
+    left.className = 'flex items-center gap-3';
+
+
+    const checkbox = document.createElement('input');
+
+    checkbox.type = 'checkbox';
+
+    checkbox.className = 'accent-yellow-500 w-4 h-4';
+
+
+    const name = document.createElement('span');
+
+    name.className = 'text-sm';
+
+    name.textContent = title;
+
+
+    checkbox.addEventListener('change', () => {
+
+        name.classList.toggle('line-through', checkbox.checked);
+
+        name.classList.toggle('text-gray-500', checkbox.checked);
+
+    });
+
+
+    const taskDetails = document.createElement('div');
+
+    taskDetails.className = 'flex flex-col gap-1';
+
+    taskDetails.append(name);
+
+
+    const dueDate = document.createElement('span');
+
+    dueDate.className = 'text-xs text-gray-500';
+
+    dueDate.textContent = date;
+
+    taskDetails.append(dueDate);
+
+
+    left.append(checkbox, taskDetails);
+
+
+    const badge = document.createElement('span');
+
+    badge.className = 'text-xs gold';
+
+    badge.textContent = priority;
+
+
+    item.append(left, badge);
+
+
+    const list = document.getElementById('taskList');
+
+    const emptyMessage = list.querySelector('p');
+
+    if (emptyMessage) {
+        list.innerHTML = '';
+    }
+
+    list.prepend(item);
+
+
+    taskForm.reset();
+
+    showToast('Task created successfully!');
+
 });
-document.getElementById('closeModal').addEventListener('click', closeEditModal);
-document.getElementById('cancelModal').addEventListener('click', closeEditModal);
-modal.addEventListener('click', event => { if (event.target === modal) closeEditModal(); });
-document.addEventListener('keydown', event => { if (event.key === 'Escape') closeEditModal(); });
-setTimeout(() => {
-    const flash = document.getElementById('flashMessage');
-    if (flash) flash.style.display = 'none';
-}, 3500);
+
+
+// INITIALIZE
+
+document.getElementById('expenseDate').value =
+    new Date().toLocaleDateString('en-CA');
+
+loadExpenses();
+
 </script>
+
 </body>
 </html>
