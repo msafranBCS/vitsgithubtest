@@ -167,7 +167,7 @@ unset($_SESSION['flash_message'], $_SESSION['flash_type']);
             <a href="index.php" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">◈ Dashboard</a>
             <a href="expenses.php" class="block p-3 rounded-xl gold-bg text-black font-semibold">◷ Daily Expenses</a>
             <a href="index.php#tasks" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">✓ To-Do Tasks</a>
-            <a href="expenses.php" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">▤ Transactions</a>
+            <a href="transaction.php" class="block p-3 rounded-xl text-gray-400 hover:bg-white/5">▤ Transactions</a>
         </nav>
         <div class="mt-auto glass p-4 rounded-2xl">
             <p class="text-xs text-gray-500">YOUR DAILY GOAL</p>
